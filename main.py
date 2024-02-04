@@ -51,12 +51,15 @@ average_losses = []
 for i in range(epochs):
     observation, info = env.reset(seed=42)
     state1 = observation
+    state1 = state1
     status = 1
     total_reward = 0
-    decay_amount = 0.000001
+    decay_amount = 0.0001
+    steps_taken = 0
+    max_steps_allowed = 10
+    
     while status == 1:
         qval = model(state1)
-        
         if random.random() < epsilon:
             action_ = np.random.randint(0, 4)
         else:
@@ -64,7 +67,7 @@ for i in range(epochs):
     
         next_observation, reward, terminated, truncated, info = env.step(action_)
         state2 = next_observation
-    
+      
         with torch.no_grad():
             newQ = model(state2)
             maxQ = torch.max(newQ).item()
@@ -85,7 +88,9 @@ for i in range(epochs):
         losses.append(loss.item())
         state1 = state2
         
-    
+        total_rewards.append(total_reward)
+        average_loss = sum(losses) / len(losses)
+        average_losses.append(average_loss)
         
         # Check for termination
         if terminated:
@@ -94,10 +99,12 @@ for i in range(epochs):
         # Epsilon decay
         if epsilon > 0.1:
             epsilon -= decay_amount
-    
-    total_rewards.append(total_reward)
-    average_loss = sum(losses) / len(losses)
-    average_losses.append(average_loss)
+            
+        steps_taken += 1
+        if steps_taken == max_steps_allowed:
+            status = 0
+            steps_taken = 0
+        
     
     if i % 10 == 0:  # Print info every 10 episodes
         print(f"Epoch {i}, Avg Loss: {average_loss}, Total Reward: {total_reward}, Epsilon: {epsilon}")
